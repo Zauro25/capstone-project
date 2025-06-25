@@ -32,67 +32,63 @@ func (s *AdminDPKService) GetAllPerpustakaanForDPK() ([]models.Perpustakaan, err
 
 // VerifyPerpustakaan memverifikasi data perpustakaan
 func (s *AdminDPKService) VerifyPerpustakaan(perpustakaanID, adminDPKUserID uint, status, catatan string) error {
-	var perpustakaan models.Perpustakaan
-	if err := s.DB.First(&perpustakaan, perpustakaanID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("perpustakaan tidak ditemukan")
-		}
-		return err
-	}
+    var perpustakaan models.Perpustakaan
+    if err := s.DB.First(&perpustakaan, perpustakaanID).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return errors.New("perpustakaan tidak ditemukan")
+        }
+        return err
+    }
 
-	// Dapatkan ID AdminDPK dari UserID
-	var adminDPK models.AdminDPK
-	if err := s.DB.Where("user_id = ?", adminDPKUserID).First(&adminDPK).Error; err != nil {
-		return errors.New("admin DPK tidak ditemukan")
-	}
+    // Dapatkan ID AdminDPK dari UserID
+    var adminDPK models.AdminDPK
+    if err := s.DB.Where("user_id = ?", adminDPKUserID).First(&adminDPK).Error; err != nil {
+        return errors.New("admin DPK tidak ditemukan")
+    }
 
-	perpustakaan.StatusVerifikasi = status
-	if err := s.DB.Save(&perpustakaan).Error; err != nil {
-		return err
-	}
+    perpustakaan.StatusVerifikasi = status
+    if err := s.DB.Save(&perpustakaan).Error; err != nil {
+        return err
+    }
 
-	// Catat verifikasi
-	verifikasi := models.Verifikasi{
-		IDData:            perpustakaanID,
-		DataType:          "Perpustakaan",
-		Status:            status,
-		CatatanRevisi:     catatan,
-		TanggalVerifikasi: time.Now(),
-		AdminDPKID:        adminDPK.ID,
-	}
-	return s.DB.Create(&verifikasi).Error
+    // Catat verifikasi (diperbarui sesuai model baru)
+    verifikasi := models.Verifikasi{
+        PerpustakaanID:    perpustakaanID,
+        Status:            status,
+        CatatanRevisi:     catatan,
+        AdminDPKID:        adminDPK.ID,
+    }
+    return s.DB.Create(&verifikasi).Error
 }
 
 // RequestRevisi meminta revisi data perpustakaan
 func (s *AdminDPKService) RequestRevisi(perpustakaanID, adminDPKUserID uint, catatan string) error {
-	var perpustakaan models.Perpustakaan
-	if err := s.DB.First(&perpustakaan, perpustakaanID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("perpustakaan tidak ditemukan")
-		}
-		return err
-	}
+    var perpustakaan models.Perpustakaan
+    if err := s.DB.First(&perpustakaan, perpustakaanID).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return errors.New("perpustakaan tidak ditemukan")
+        }
+        return err
+    }
 
-	// Dapatkan ID AdminDPK dari UserID
-	var adminDPK models.AdminDPK
-	if err := s.DB.Where("user_id = ?", adminDPKUserID).First(&adminDPK).Error; err != nil {
-		return errors.New("admin DPK tidak ditemukan")
-	}
+    // Dapatkan ID AdminDPK dari UserID
+    var adminDPK models.AdminDPK
+    if err := s.DB.Where("user_id = ?", adminDPKUserID).First(&adminDPK).Error; err != nil {
+        return errors.New("admin DPK tidak ditemukan")
+    }
 
-	perpustakaan.StatusVerifikasi = "Perlu Revisi"
-	if err := s.DB.Save(&perpustakaan).Error; err != nil {
-		return err
-	}
+    perpustakaan.StatusVerifikasi = "Perlu Revisi"
+    if err := s.DB.Save(&perpustakaan).Error; err != nil {
+        return err
+    }
 
-	revisi := models.Revisi{
-		IDData:           perpustakaanID,
-		DataType:         "Perpustakaan",
-		CatatanDPK:       catatan,
-		TanggalRevisiDPK: time.Now(),
-		AdminDPKID:       adminDPK.ID,
-		StatusRevisi:     "Menunggu Respon",
-	}
-	return s.DB.Create(&revisi).Error
+    revisi := models.Revisi{
+        PerpustakaanID:    perpustakaanID,
+        CatatanDPK:       catatan,
+        AdminDPKID:       adminDPK.ID,
+        StatusRevisi:     "Menunggu Respon",
+    }
+    return s.DB.Create(&revisi).Error
 }
 
 // UploadLaporan mengunggah file laporan

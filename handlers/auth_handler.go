@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"perpustakaan-api/models"
 	"perpustakaan-api/services"
 	"perpustakaan-api/utils"
 
@@ -39,6 +40,36 @@ func (h *AuthHandler) RegisterUser(c *gin.Context) {
 		return
 	}
 
+	// Buat entitas spesifik berdasarkan role
+	switch req.Role {
+	case "AdminPerpustakaan":
+		// Admin Perpustakaan memerlukan perpustakaan_id
+		var adminReq struct {
+			PerpustakaanID uint `json:"perpustakaan_id" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&adminReq); err != nil {
+			utils.ErrorResponse(c, http.StatusBadRequest, "Perpustakaan ID diperlukan untuk Admin Perpustakaan", nil)
+			return
+		}
+		admin := models.AdminPerpustakaan{
+			UserID:         user.ID,
+			PerpustakaanID: adminReq.PerpustakaanID,
+		}
+		if err := h.AuthService.DB.Create(&admin).Error; err != nil {
+			utils.ErrorResponse(c, http.StatusInternalServerError, "Gagal membuat admin perpustakaan", err.Error())
+			return
+		}
+	case "AdminDPK":
+		admin := models.AdminDPK{
+			UserID: user.ID,
+		}
+		if err := h.AuthService.DB.Create(&admin).Error; err != nil {
+			utils.ErrorResponse(c, http.StatusInternalServerError, "Gagal membuat admin DPK", err.Error())
+			return
+		}
+	// Executive tidak memerlukan entitas tambahan
+	}
+
 	utils.SuccessResponse(c, http.StatusCreated, "Pengguna berhasil didaftarkan", gin.H{
 		"id":       user.ID,
 		"username": user.Username,
@@ -71,8 +102,6 @@ func (h *AuthHandler) LoginUser(c *gin.Context) {
 
 // LogoutUser menangani logout pengguna
 func (h *AuthHandler) LogoutUser(c *gin.Context) {
-	// Dalam kasus JWT, logout di sisi server biasanya hanya mencatat aktivitas.
-	// Token harus dihapus di sisi klien.
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "ID pengguna tidak ditemukan di konteks", nil)
@@ -86,4 +115,95 @@ func (h *AuthHandler) LogoutUser(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, "Logout berhasil", nil)
+}
+
+// RegisterAdminPerpustakaan khusus untuk pendaftaran admin perpustakaan
+func (h *AuthHandler) RegisterAdminPerpustakaan(c *gin.Context) {
+	var req struct {
+		Username       string `json:"username" binding:"required"`
+		Password       string `json:"password" binding:"required"`
+		PerpustakaanID uint   `json:"perpustakaan_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Input tidak valid", err.Error())
+		return
+	}
+
+	user, err := h.AuthService.RegisterUser(req.Username, req.Password, "AdminPerpustakaan")
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Gagal mendaftarkan admin perpustakaan", err.Error())
+		return
+	}
+
+	admin := models.AdminPerpustakaan{
+		UserID:         user.ID,
+		PerpustakaanID: req.PerpustakaanID,
+	}
+	if err := h.AuthService.DB.Create(&admin).Error; err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Gagal membuat admin perpustakaan", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, "Admin perpustakaan berhasil didaftarkan", gin.H{
+		"id":             user.ID,
+		"username":       user.Username,
+		"role":           user.Role,
+		"perpustakaan_id": req.PerpustakaanID,
+	})
+}
+
+// RegisterAdminDPK khusus untuk pendaftaran admin DPK
+func (h *AuthHandler) RegisterAdminDPK(c *gin.Context) {
+	var req struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Input tidak valid", err.Error())
+		return
+	}
+
+	user, err := h.AuthService.RegisterUser(req.Username, req.Password, "AdminDPK")
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Gagal mendaftarkan admin DPK", err.Error())
+		return
+	}
+
+	admin := models.AdminDPK{
+		UserID: user.ID,
+	}
+	if err := h.AuthService.DB.Create(&admin).Error; err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Gagal membuat admin DPK", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, "Admin DPK berhasil didaftarkan", gin.H{
+		"id":       user.ID,
+		"username": user.Username,
+		"role":     user.Role,
+	})
+}
+
+// RegisterExecutive khusus untuk pendaftaran executive
+func (h *AuthHandler) RegisterExecutive(c *gin.Context) {
+	var req struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Input tidak valid", err.Error())
+		return
+	}
+
+	user, err := h.AuthService.RegisterUser(req.Username, req.Password, "Executive")
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Gagal mendaftarkan executive", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, "Executive berhasil didaftarkan", gin.H{
+		"id":       user.ID,
+		"username": user.Username,
+		"role":     user.Role,
+	})
 }

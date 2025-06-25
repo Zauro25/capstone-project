@@ -153,7 +153,7 @@ func (h *AdminDPKHandler) RespondToRevisi(c *gin.Context) {
 	// Opsional: Ubah status verifikasi perpustakaan kembali ke "Dalam Proses Verifikasi"
 	// agar Admin DPK bisa meninjau ulang setelah revisi
 	var perpustakaan models.Perpustakaan
-	if err := h.PerpustakaanService.DB.First(&perpustakaan, revisi.IDData).Error; err == nil {
+	if err := h.PerpustakaanService.DB.First(&perpustakaan, revisi.PerpustakaanID).Error; err == nil {
 		perpustakaan.StatusVerifikasi = "Dalam Proses Verifikasi"
 		h.PerpustakaanService.DB.Save(&perpustakaan)
 	}

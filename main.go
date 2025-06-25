@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 	"perpustakaan-api/config"
-	"perpustakaan-api/models"
 	"perpustakaan-api/routes"
 
 	"github.com/gin-gonic/gin"
@@ -12,26 +11,9 @@ import (
 
 func main() {
 	// Inisialisasi database
-	db := config.InitDB()
+	config.InitDB() // Call InitDB without assignment if it returns no value
 
-	// Auto-migrate semua model
-	err := db.AutoMigrate(
-		&models.Perpustakaan{},
-		&models.SDM{},
-		&models.Pengunjung{},
-		&models.Anggota{},
-		&models.AdminPerpustakaan{},
-		&models.AdminDPK{},
-		&models.Verifikasi{},
-		&models.Revisi{},
-		&models.Laporan{},
-		&models.LogAktivitas{},
-		&models.User{},
-	)
-	if err != nil {
-		log.Fatalf("Gagal auto-migrate database: %v", err)
-	}
-	log.Println("Database berhasil di-migrate.")
+
 
 	// Inisialisasi Gin router
 	router := gin.Default()
@@ -51,7 +33,7 @@ func main() {
 	})
 
 	// Setup routes
-	routes.SetupRoutes(router, db)
+	routes.SetupRoutes(router, config.DB)
 
 	// Ambil port dari environment variable sistem (bukan dari .env)
 	port := os.Getenv("PORT") // Heroku/DigitalOcean biasanya pakai PORT
